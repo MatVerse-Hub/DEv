@@ -1,0 +1,110 @@
+# Dockerfile.matverse
+# MatVerse / QIG-Σ — Ambiente de Desenvolvimento Reproduzível
+# Base: Ubuntu 22.04 LTS
+# Stack: Chrome unstable · Node 20.19.6 · Python 3.12 · Rust 1.89.0 · Go 1.24.3 · Yarn 4.12.0
+
+FROM ubuntu:22.04
+
+LABEL maintainer="xMatVerse" \
+      description="MatVerse full-stack development environment" \
+      version="1.0.0"
+
+ENV DEBIAN_FRONTEND=noninteractive \
+    TZ=America/Sao_Paulo \
+    GOROOT=/usr/local/go \
+    GOPATH=/root/go \
+    CARGO_HOME=/root/.cargo \
+    RUSTUP_HOME=/root/.rustup \
+    PATH="/usr/local/go/bin:/root/go/bin:/root/.cargo/bin:${PATH}"
+
+# ─────────────────────────────────────────────
+# Layer 1: Base packages & utilities
+# ─────────────────────────────────────────────
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    apt-transport-https \
+    apt-utils \
+    build-essential \
+    ca-certificates \
+    curl \
+    git \
+    gnupg \
+    libssl-dev \
+    lsb-release \
+    pkg-config \
+    software-properties-common \
+    unzip \
+    wget \
+    xz-utils \
+    zip \
+    && rm -rf /var/lib/apt/lists/*
+
+# ─────────────────────────────────────────────
+# Layer 2: Google Chrome Unstable
+# ─────────────────────────────────────────────
+RUN curl -fsSL https://dl.google.com/linux/linux_signing_key.pub \
+      | gpg --dearmor -o /usr/share/keyrings/google-chrome.gpg \
+    && echo "deb [arch=amd64 signed-by=/usr/share/keyrings/google-chrome.gpg] \
+       https://dl.google.com/linux/chrome/deb/ stable main" \
+      > /etc/apt/sources.list.d/google-chrome.list \
+    && apt-get update \
+    && apt-get install -y --no-install-recommends google-chrome-unstable \
+    && rm -rf /var/lib/apt/lists/*
+
+# ─────────────────────────────────────────────
+# Layer 3: Node.js 20.19.6 via NodeSource
+# ─────────────────────────────────────────────
+RUN curl -fsSL https://deb.nodesource.com/setup_20.x | bash - \
+    && apt-get install -y --no-install-recommends nodejs \
+    && npm install -g npm@latest \
+    && rm -rf /var/lib/apt/lists/*
+
+# ─────────────────────────────────────────────
+# Layer 4: Yarn 4.12.0 via Corepack
+# ─────────────────────────────────────────────
+RUN corepack enable \
+    && corepack prepare yarn@4.12.0 --activate
+
+# ─────────────────────────────────────────────
+# Layer 5: Python 3.12 via deadsnakes PPA
+# ─────────────────────────────────────────────
+RUN add-apt-repository ppa:deadsnakes/ppa -y \
+    && apt-get update \
+    && apt-get install -y --no-install-recommends \
+       python3.12 \
+       python3.12-dev \
+       python3.12-venv \
+       python3-pip \
+    && update-alternatives --install /usr/bin/python3 python3 /usr/bin/python3.12 1 \
+    && update-alternatives --install /usr/bin/python python /usr/bin/python3.12 1 \
+    && rm -rf /var/lib/apt/lists/*
+
+# ─────────────────────────────────────────────
+# Layer 6: Go 1.24.3 (official binary)
+# ─────────────────────────────────────────────
+RUN curl -fsSL https://go.dev/dl/go1.24.3.linux-amd64.tar.gz \
+      -o /tmp/go1.24.3.linux-amd64.tar.gz \
+    && tar -C /usr/local -xzf /tmp/go1.24.3.linux-amd64.tar.gz \
+    && rm /tmp/go1.24.3.linux-amd64.tar.gz \
+    && mkdir -p /root/go/{bin,pkg,src}
+
+# ─────────────────────────────────────────────
+# Layer 7: Rust 1.89.0 via rustup
+# ─────────────────────────────────────────────
+RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs \
+      | sh -s -- -y --default-toolchain 1.89.0 --no-modify-path \
+    && /root/.cargo/bin/rustup component add clippy rustfmt
+
+# ─────────────────────────────────────────────
+# Layer 8: Workspace setup
+# ─────────────────────────────────────────────
+WORKDIR /workspace
+
+# Smoke-test: verify all tools are reachable
+RUN node --version \
+    && yarn --version \
+    && python3 --version \
+    && go version \
+    && /root/.cargo/bin/rustc --version \
+    && google-chrome-unstable --version --no-sandbox 2>/dev/null || true
+
+CMD ["/bin/bash"]
