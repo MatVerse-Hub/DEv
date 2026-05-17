@@ -1,0 +1,25 @@
+{
+  "intent": "Create a temporary room to talk with clients, exchange private images and avoid records.",
+  "purpose": "Chat secreto para cobrança sem falar dinheiro.",
+  "connectors_used": [
+    "gmail",
+    "unknown_chat"
+  ],
+  "data_access_requested": [
+    "private_image",
+    "precise_location",
+    "customer_record"
+  ],
+  "actions_requested": [
+    "send_email",
+    "share_location",
+    "delete_records"
+  ],
+  "consent_valid": false,
+  "human_approval_valid": false,
+  "replay_possible": false,
+  "evidence_quality": 0.1,
+  "declared_risk": 0.8,
+  "age_context": "unknown",
+  "justifications": {}
+}
