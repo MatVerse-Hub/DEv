@@ -8,8 +8,8 @@ This module encodes the core formulas described in the CANÔNICO 3 FULL notes:
 
 from __future__ import annotations
 
-from dataclasses import dataclass, asdict
-from typing import Any, Dict
+from dataclasses import asdict, dataclass
+from typing import Any, Dict, Optional
 
 
 @dataclass(frozen=True)
@@ -21,6 +21,20 @@ class CausalSignal:
 
 
 @dataclass(frozen=True)
+class ValidationResult:
+    """Result produced by Ω-Gate validation.
+
+    The omega score is returned with the admissibility decision so the receipt
+    reflects the exact score that was validated. This avoids recomputing Ω in
+    the runtime and keeps the gate as the single source of constitutional truth.
+    """
+
+    valid: bool
+    omega: float
+    reason: str
+
+
+@dataclass(frozen=True)
 class GovernanceDecision:
     event_id: str
     omega: float
@@ -29,6 +43,7 @@ class GovernanceDecision:
     recorded: bool
     execution: bool
     reason: str
+    receipt_hash: Optional[str] = None
 
     def receipt(self) -> Dict[str, Any]:
         return asdict(self)
@@ -51,15 +66,15 @@ class OmegaGate:
         )
 
     @classmethod
-    def validate(cls, signal: CausalSignal) -> tuple[bool, str]:
+    def validate(cls, signal: CausalSignal) -> ValidationResult:
         score = cls.omega(signal)
         if signal.psi < cls.min_psi:
-            return False, f"psi_below_threshold:{signal.psi:.4f}"
+            return ValidationResult(False, score, f"psi_below_threshold:{signal.psi:.4f}")
         if signal.cvar > cls.max_cvar:
-            return False, f"cvar_above_threshold:{signal.cvar:.4f}"
+            return ValidationResult(False, score, f"cvar_above_threshold:{signal.cvar:.4f}")
         if score < cls.min_omega:
-            return False, f"omega_below_threshold:{score:.4f}"
-        return True, "admissible"
+            return ValidationResult(False, score, f"omega_below_threshold:{score:.4f}")
+        return ValidationResult(True, score, "admissible")
 
 
 class CausalLedger:
@@ -68,8 +83,16 @@ class CausalLedger:
     def __init__(self) -> None:
         self._receipts: list[GovernanceDecision] = []
 
-    def append(self, decision: GovernanceDecision) -> None:
+    def append(self, decision: GovernanceDecision) -> bool:
+        """Append a decision receipt and report whether recording succeeded.
+
+        Recording is intentionally independent from validation/proof. This keeps
+        Execution(x)=Validated ∧ Proved ∧ Recorded meaningful: if storage fails
+        or policy later rejects persistence, execution must remain false.
+        """
+
         self._receipts.append(decision)
+        return self._receipts[-1] is decision
 
     def replay(self) -> list[Dict[str, Any]]:
         return [r.receipt() for r in self._receipts]
@@ -82,21 +105,34 @@ class MatVerseRuntime:
         self.ledger = CausalLedger()
 
     def process_event(self, event_id: str, signal: CausalSignal, proved: bool) -> GovernanceDecision:
-        validated, reason = OmegaGate.validate(signal)
-        omega_score = OmegaGate.omega(signal)
-        recorded = validated and proved
-        execution = validated and proved and recorded
+        validation = OmegaGate.validate(signal)
+
+        provisional = GovernanceDecision(
+            event_id=event_id,
+            omega=validation.omega,
+            validated=validation.valid,
+            proved=proved,
+            recorded=False,
+            execution=False,
+            reason=validation.reason,
+        )
+
+        recorded = self.ledger.append(provisional) if validation.valid and proved else False
+        execution = validation.valid and proved and recorded
 
         decision = GovernanceDecision(
             event_id=event_id,
-            omega=omega_score,
-            validated=validated,
+            omega=validation.omega,
+            validated=validation.valid,
             proved=proved,
             recorded=recorded,
             execution=execution,
-            reason=reason,
+            reason=validation.reason,
         )
-        self.ledger.append(decision)
+
+        if recorded:
+            self.ledger._receipts[-1] = decision
+
         return decision
 
 
