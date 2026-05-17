@@ -1,0 +1,52 @@
+{
+  "skill_id": "business_gate",
+  "domain": "small_business_operations",
+  "connectors": [
+    "gmail",
+    "google_drive",
+    "google_calendar",
+    "stripe",
+    "paypal",
+    "hubspot",
+    "notion",
+    "docusign",
+    "quickbooks"
+  ],
+  "data_access": [
+    "documents",
+    "metadata",
+    "email_context",
+    "invoice",
+    "payment_data",
+    "contract",
+    "customer_record"
+  ],
+  "sensitive_actions": [
+    "send_email",
+    "request_signature",
+    "send_invoice",
+    "initiate_payment",
+    "approve_contract"
+  ],
+  "human_approval_required": true,
+  "retention_policy": "hash_receipt_only_by_default",
+  "risk_classes": [
+    "privacy_risk",
+    "financial_commitment_risk",
+    "legal_claim_risk",
+    "customer_data_risk"
+  ],
+  "gate_policy": {
+    "min_psi": 0.85,
+    "max_cvar": 0.05,
+    "min_omega": 0.85,
+    "replay_required": true
+  },
+  "outputs": [
+    "decision",
+    "risk_report",
+    "receipt_hash",
+    "ledger_record",
+    "replay_manifest"
+  ]
+}
