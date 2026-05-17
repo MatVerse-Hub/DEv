@@ -1,0 +1,27 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "matverse-skill-governance"
+version = "0.1.0"
+description = "ACOA Skill Governance Layer for admissible vertical agent skills."
+readme = "README.md"
+requires-python = ">=3.11"
+authors = [{ name = "Mateus A. Areas / MatVerse Institute" }]
+license = { text = "MIT" }
+keywords = ["matverse", "acoa", "omega-gate", "agents", "governance", "ledger", "replay"]
+dependencies = []
+
+[project.optional-dependencies]
+dev = ["pytest>=8.0.0"]
+
+[project.scripts]
+matverse-skill-governance = "matverse_skill_governance.cli:main"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src"]
+
+[tool.setuptools.packages.find]
+where = ["src"]
