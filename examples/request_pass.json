@@ -1,0 +1,27 @@
+{
+  "intent": "Compile approved monthly invoice events and prepare a replayable month-close evidence pack.",
+  "purpose": "Governed business month-close with human approval.",
+  "connectors_used": [
+    "gmail",
+    "google_drive",
+    "stripe",
+    "quickbooks"
+  ],
+  "data_access_requested": [
+    "metadata",
+    "invoice",
+    "payment_data"
+  ],
+  "actions_requested": [
+    "send_invoice"
+  ],
+  "consent_valid": true,
+  "human_approval_valid": true,
+  "replay_possible": true,
+  "evidence_quality": 0.98,
+  "declared_risk": 0.01,
+  "justifications": {
+    "payment_data": "Required for invoice reconciliation."
+  },
+  "claim_evidence": true
+}
